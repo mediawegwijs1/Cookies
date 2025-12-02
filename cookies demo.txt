@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Demo cookies en privacy</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --blue:#4aa3ff;
+    --orange:#ff8b5a;
+    --bg:#f6f7fb;
+    --reset:#6b7280;
+    --result:#10b981;
+  }
+  *{box-sizing:border-box}
+  body{font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; margin:12px; background:var(--bg); color:#111}
+  h1{font-size:24px;margin:6px 0}
+  p{margin:6px 0 12px}
+  .panel{background:#fff;border:1px solid #e6e6ea;border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,0.04);padding:12px}
+  #layout{display:grid;grid-template-columns:360px 1fr 360px;gap:14px}
+  .site-btn{background:var(--blue);color:#fff;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;box-shadow:0 2px 2px rgba(0,0,0,0.08);font-weight:700}
+  .site-btn:active{transform:translateY(1px)}
+  .site-btn.clicked{background:#e9edf3;color:#7a8aa0;border:1px solid #d4dbe6;cursor:not-allowed}
+  #sitesWrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;max-height:520px;overflow:auto;padding-right:4px}
+  .btn{padding:10px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:800}
+  .btn-reset{background:var(--reset);color:#fff}
+  .btn-result{background:var(--result);color:#fff}
+  #svgwrap{min-height:640px}
+  svg{width:100%;height:640px;background:linear-gradient(180deg,#fff,#f0f8ff);border-radius:12px}
+  .site-node{fill:var(--blue);cursor:pointer}
+  .tracker-node{fill:var(--orange);cursor:pointer}
+  .label{font-size:12px;pointer-events:none}
+  .link{stroke:#bbb;stroke-width:2;opacity:0.7}
+  .highlight{stroke:#222;stroke-width:3;opacity:0.95}
+  .small{font-size:12px;color:#555}
+  .orangeBold{color:var(--orange);font-weight:800}
+  #trackersList{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .tracker-card{background:#fff;border:1px solid #eee;padding:10px;border-radius:10px;min-width:170px;box-shadow:0 1px 0 rgba(0,0,0,0.04)}
+  .badge{display:inline-block;padding:4px 10px;border-radius:999px;background:#f0f4ff;border:1px solid #d7e3ff;font-weight:700}
+  #centerLog{max-height:160px;overflow:auto;padding:8px;border:1px dashed #eee;background:#fff;border-radius:8px}
+  #passport{background:#fff9e6;border:2px solid #ffd27a}
+  #passport .title{font-size:18px;font-weight:900;margin-bottom:6px}
+  .passport-inner{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:start}
+  .avatar{width:110px;height:130px;border-radius:8px;background:#f0e6ce;display:flex;align-items:center;justify-content:center;border:2px solid #e3c78e}
+  .avatar svg{width:80px;height:80px;opacity:0.55}
+  .field{padding:8px;border:1px dashed #f1c46b;border-radius:8px;background:#fff}
+  .field strong{display:block;font-size:12px;color:#7b5a1a}
+  .big{font-size:16px;font-weight:800}
+  .empty{color:#999}
+  #score{margin-top:10px;border-top:1px solid #ffe4a6;padding-top:10px}
+  #score .num{font-size:22px;font-weight:900;margin-right:6px}
+  #score p{margin:6px 0}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:10}
+  .modal .box{background:#fff;border-radius:12px;border:1px solid #ddd;max-width:720px;width:92%;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,0.2)}
+  .modal h3{margin:0 0 8px}
+  .modal p{margin:0 0 12px}
+  .modal .row{display:flex;gap:12px;flex-wrap:wrap}
+  .btn-primary{background:var(--orange);color:#fff}
+  .btn-secondary{background:#e9edf3;color:#223}
+  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .stat{background:#f6faf8;border:1px solid #d7efe3;border-radius:10px;padding:10px}
+  .stat .num{font-size:26px;font-weight:900}
+  .chip{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;padding:4px 8px;border-radius:999px;margin:3px 3px 0 0}
+  .bigTip{font-size:18px;font-weight:900;margin-top:10px;background:#fff4e5;border:1px solid #ffd8a8;border-radius:10px;padding:10px}
+</style>
+</head>
+<body>
+<h1>Demo cookies en privacy</h1>
+<p>Blauw = <strong>websites</strong>. <span class="orangeBold">Oranje = trackers</span> (bedrijven die jouw informatie krijgen). Het netwerk laat zien wie er meekijkt.</p>
+
+<div id="layout">
+  <div class="panel">
+    <strong>Websites (klik om te bezoeken)</strong>
+    <div id="sitesWrap"></div>
+    <div id="actions">
+      <button id="resetBtn" class="btn btn-reset">Reset</button>
+      <button id="resultBtn" class="btn btn-result">Eindresultaat</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="font-weight:800;margin-bottom:6px">Wie kijkt er mee?</div>
+    <div id="svgwrap"><svg id="svg"></svg></div>
+    <div style="font-weight:800;margin:10px 0 6px">Wat is er zojuist gebeurd?</div>
+    <div id="centerLog" class="small"></div>
+    <div style="font-weight:800;margin:10px 0 6px">Trackers <span class="small">(bedrijven die jouw informatie krijgen)</span></div>
+    <div id="trackersList"></div>
+  </div>
+
+  <div id="passport" class="panel">
+    <div class="title">Jouw Privacy-Paspoort</div>
+    <div class="passport-inner">
+      <div class="avatar" id="avatar">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M32 6c9 0 16 7 16 16 0 6-3 11-8 14 6 2 11 7 13 13 1 3-1 7-4 7H15c-3 0-5-4-4-7 2-6 7-11 13-13-5-3-8-8-8-14 0-9 7-16 16-16z" fill="#9b7f4f"/>
+        </svg>
+      </div>
+      <div>
+        <div class="field"><strong>Hobby</strong><div id="pf-hobby" class="big empty">—</div></div>
+        <div class="field" style="margin-top:6px"><strong>Interesses</strong><div id="pf-interest" class="big empty">—</div></div>
+        <div class="field" style="margin-top:6px"><strong>Leeftijdsgroep</strong><div id="pf-age" class="big empty">—</div></div>
+        <div class="field" style="margin-top:6px"><strong>Onthouden</strong><div id="pf-remember" class="big empty">—</div></div>
+      </div>
+    </div>
+    <div id="score">
+      <p><span class="num" id="sc-sites">0</span>sites bezocht</p>
+      <p><span class="num" id="sc-tracked-sites">0</span>sites waar je gevolgd bent</p>
+      <p><span class="num" id="sc-trackers">0</span>bedrijven volgen jou nu</p>
+    </div>
+  </div>
+</div>
+
+<!-- Cookie-banner modal -->
+<div id="consentModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+  <div class="box">
+    <h3 id="consentTitle">Cookie-keuze</h3>
+    <p id="consentText">Alleen noodzakelijke cookies of alles toestaan?</p>
+    <div class="row" style="justify-content:flex-end;margin-top:10px">
+      <button class="btn btn-secondary" id="btnNecessary">Alleen noodzakelijke cookies</button>
+      <button class="btn btn-primary" id="btnAll">Alle cookies accepteren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Result modal -->
+<div id="resultModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+  <div class="box">
+    <h3 id="resultTitle">Eindresultaat</h3>
+    <div id="resultBody"></div>
+    <div class="bigTip">Tip: kies vaker <em>Alleen noodzakelijke cookies</em> als je minder gevolgd wilt worden.</div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-reset" id="closeResult">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// HIER KOMT HET LANGE JAVASCRIPT-GEDEELTE
+// (vanwege de lengte past het niet in één bericht)
+
+</script>
+</body>
+</html>

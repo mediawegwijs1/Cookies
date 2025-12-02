@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Demo cookies en privacy</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --blue:#4aa3ff;
+    --orange:#ff8b5a;
+    --bg:#f6f7fb;
+    --reset:#6b7280;
+    --result:#10b981;
+  }
+  *{box-sizing:border-box}
+  body{font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; margin:12px; background:var(--bg); color:#111}
+  h1{font-size:24px;margin:6px 0}
+  p{margin:6px 0 12px}
+  .panel{background:#fff;border:1px solid #e6e6ea;border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,0.04);padding:12px}
+  #layout{display:grid;grid-template-columns:360px 1fr 360px;gap:14px}
+  .site-btn{background:var(--blue);color:#fff;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;box-shadow:0 2px 2px rgba(0,0,0,0.08);font-weight:700}
+  .site-btn:active{transform:translateY(1px)}
+  .site-btn.clicked{background:#e9edf3;color:#7a8aa0;border:1px solid #d4dbe6;cursor:not-allowed}
+  #sitesWrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;max-height:520px;overflow:auto;padding-right:4px}
+  .btn{padding:10px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:800}
+  .btn-reset{background:var(--reset);color:#fff}
+  .btn-result{background:var(--result);color:#fff}
+  #svgwrap{min-height:640px}
+  svg{width:100%;height:640px;background:linear-gradient(180deg,#fff,#f0f8ff);border-radius:12px}
+  .site-node{fill:var(--blue);cursor:pointer}
+  .tracker-node{fill:var(--orange);cursor:pointer}
+  .label{font-size:12px;pointer-events:none}
+  .link{stroke:#bbb;stroke-width:2;opacity:0.7}
+  .highlight{stroke:#222;stroke-width:3;opacity:0.95}
+  .small{font-size:12px;color:#555}
+  .orangeBold{color:var(--orange);font-weight:800}
+  #trackersList{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .tracker-card{background:#fff;border:1px solid #eee;padding:10px;border-radius:10px;min-width:170px;box-shadow:0 1px 0 rgba(0,0,0,0.04)}
+  .badge{display:inline-block;padding:4px 10px;border-radius:999px;background:#f0f4ff;border:1px solid #d7e3ff;font-weight:700}
+  #centerLog{max-height:160px;overflow:auto;padding:8px;border:1px dashed #eee;background:#fff;border-radius:8px}
+  #passport{background:#fff9e6;border:2px solid #ffd27a}
+  #passport .title{font-size:18px;font-weight:900;margin-bottom:6px}
+  .passport-inner{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:start}
+  .avatar{width:110px;height:130px;border-radius:8px;background:#f0e6ce;display:flex;align-items:center;justify-content:center;border:2px solid #e3c78e}
+  .avatar svg{width:80px;height:80px;opacity:0.55}
+  .field{padding:8px;border:1px dashed #f1c46b;border-radius:8px;background:#fff}
+  .field strong{display:block;font-size:12px;color:#7b5a1a}
+  .big{font-size:16px;font-weight:800}
+  .empty{color:#999}
+  #score{margin-top:10px;border-top:1px solid #ffe4a6;padding-top:10px}
+  #score .num{font-size:22px;font-weight:900;margin-right:6px}
+  #score p{margin:6px 0}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:10}
+  .modal .box{background:#fff;border-radius:12px;border:1px solid #ddd;max-width:720px;width:92%;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,0.2)}
+  .modal h3{margin:0 0 8px}
+  .modal p{margin:0 0 12px}
+  .modal .row{display:flex;gap:12px;flex-wrap:wrap}
+  .btn-primary{background:var(--orange);color:#fff}
+  .btn-secondary{background:#e9edf3;color:#223}
+  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .stat{background:#f6faf8;border:1px solid #d7efe3;border-radius:10px;padding:10px}
+  .stat .num{font-size:26px;font-weight:900}
+  .chip{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;padding:4px 8px;border-radius:999px;margin:3px 3px 0 0}
+  .bigTip{font-size:18px;font-weight:900;margin-top:10px;background:#fff4e5;border:1px solid #ffd8a8;border-radius:10px;padding:10px}
+</style>
+</head>
+<body>
+<h1>Demo cookies en privacy</h1>
+<p>Blauw = <strong>websites</strong>. <span class="orangeBold">Oranje = trackers</span> (bedrijven die jouw informatie krijgen). Het netwerk laat zien wie er meekijkt.</p>
+
+<div id="layout">
+  <div class="panel">
+    <strong>Websites (klik om te bezoeken)</strong>
+    <div id="sitesWrap"></div>
+    <div id="actions">
+      <button id="resetBtn" class="btn btn-reset">Reset</button>
+      <button id="resultBtn" class="btn btn-result">Eindresultaat</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="font-weight:800;margin-bottom:6px">Wie kijkt er mee?</div>
+    <div id="svgwrap"><svg id="svg"></svg></div>
+    <div style="font-weight:800;margin:10px 0 6px">Wat is er zojuist gebeurd?</div>
+    <div id="centerLog" class="small"></div>
+    <div style="font-weight:800;margin:10px 0 6px">Trackers <span class="small">(bedrijven die jouw informatie krijgen)</span></div>
+    <div id="trackersList"></div>
+  </div>
+
+  <div id="passport" class="panel">
+    <div class="title">Jouw Privacy‑Paspoort</div>
+    <div class="passport-inner">
+      <div class="avatar" id="avatar">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M32 6c9 0 16 7 16 16 0 6-3 11-8 14 6 2 11 7 13 13 1 3-1 7-4 7H15c-3 0-5-4-4-7 2-6 7-11 13-13-5-3-8-8-8-14 0-9 7-16 16-16z" fill="#9b7f4f"/>
+        </svg>
+      </div>
+      <div>
+        <div class="field"><strong>Hobby</strong><div id="pf-hobby" class="big empty">—</div></div>
+        <div class="field" style="margin-top:6px"><strong>Interesses</strong><div id="pf-interest" class="big empty">—</div></div>
+        <div class="field" style="margin-top:6px"><strong>Leeftijdsgroep</strong><div id="pf-age" class="big empty">—</div></div>
+        <div class="field" style="margin-top:6px"><strong>Onthouden</strong><div id="pf-remember" class="big empty">—</div></div>
+      </div>
+    </div>
+    <div id="score">
+      <p><span class="num" id="sc-sites">0</span>sites bezocht</p>
+      <p><span class="num" id="sc-tracked-sites">0</span>sites waar je gevolgd bent</p>
+      <p><span class="num" id="sc-trackers">0</span>bedrijven volgen jou nu</p>
+    </div>
+  </div>
+</div>
+
+<!-- Cookie‑banner modal (short texts) -->
+<div id="consentModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+  <div class="box">
+    <h3 id="consentTitle">Cookie‑keuze</h3>
+    <p id="consentText">Alleen noodzakelijke cookies of alles toestaan?</p>
+    <div class="row" style="justify-content:flex-end;margin-top:10px">
+      <button class="btn btn-secondary" id="btnNecessary">Alleen noodzakelijke cookies</button>
+      <button class="btn btn-primary" id="btnAll">Alle cookies accepteren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Result modal -->
+<div id="resultModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+  <div class="box">
+    <h3 id="resultTitle">Eindresultaat</h3>
+    <div id="resultBody"></div>
+    <div class="bigTip">Tip: kies vaker <em>Alleen noodzakelijke cookies</em> als je minder gevolgd wilt worden.</div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-reset" id="closeResult">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Config ----------
+// 50 kindgerichte websites
+const SITES = [
+  "NieuwsKrant.nl","GameFun.com","KijkTube.nl","ShopLand.nl","ReceptenBoek.nl","SportZone.nl","SchoolWeb.nl","DierenWiki.nl","WeerVandaag.nl","ReisPlezier.nl",
+  "FilmFabrik.nl","Boekenkast.nl","TechNieuws.nl","MuziekMix.nl","GezondLeven.nl","EcoTips.nl","SpeelgoedFun.nl","KinderKrant.nl",
+  "VoetbalArena.nl","DansStudio.nl","KnutselKamer.nl","ScienceKids.nl","SkatePark.nl","SpaceNerds.nl","PianoPlezier.nl","ComicsHoek.nl",
+  "Hondenvriend.nl","KattenKennis.nl","BakkerijPret.nl","ProgrammeerPuzzel.nl","DoolhofGames.nl","RaceHelden.nl","ZwemClub.nl","TekenenDoeJeZo.nl",
+  "RekenSter.nl","TaalToppers.nl","GeschiedenisFun.nl","AardrijkskundeWeb.nl","NatuurQuest.nl","VideoVibes.nl","RobotLab.nl",
+  "VliegtuigFans.nl","TreinSpot.nl","PaardenPlein.nl","SchaakKamp.nl","KlimBos.nl","SurfenZee.nl","SnowFun.nl","KokenMetKinderen.nl"
+];
+
+// Trackers (oranje)
+const TRACKERS = [
+  "ReclameMaatje","SocialKijker","DataSnuffel","LikeVrienden","ShopVolger","VideoAnalist",
+  "KlikMeter","ProfielBouwer","AdRaketten","SuperStatistiek","BannerBooster","TrendTeller"
+];
+
+// Profielsuggesties per site (accumulerend)
+const PROFILE_HINTS = {
+  "SportZone.nl": {hobby:"Sport (voetbal)"}, "VoetbalArena.nl": {hobby:"Sport (voetbal)"}, "SkatePark.nl": {hobby:"Skaten"},
+  "DansStudio.nl": {hobby:"Dansen"}, "MuziekMix.nl": {interest:"Muziek"}, "PianoPlezier.nl": {interest:"Piano"},
+  "GameFun.com": {hobby:"Gamen"}, "SpaceNerds.nl": {interest:"Ruimte"}, "ScienceKids.nl": {interest:"Wetenschap"},
+  "Boekenkast.nl": {interest:"Lezen"}, "ComicsHoek.nl": {interest:"Strips"}, "ReceptenBoek.nl": {interest:"Koken"},
+  "EcoTips.nl": {interest:"Duurzaam"}, "SpeelgoedFun.nl": {age:"Kind (8–12)"},
+  "KinderKrant.nl": {age:"Kind (8–12)"}, "SchoolWeb.nl": {age:"Kind (8–12)"}, "RekenSter.nl": {age:"Kind (8–12)"}, "TaalToppers.nl": {age:"Kind (8–12)"},
+  "KokenMetKinderen.nl": {interest:"Koken"}, "RaceHelden.nl": {hobby:"Racen"}, "TekenenDoeJeZo.nl": {interest:"Tekenen"},
+  "ZwemClub.nl": {hobby:"Zwemmen"}, "KlimBos.nl": {hobby:"Klimmen"}, "SurfenZee.nl": {hobby:"Surfen"}, "SnowFun.nl": {hobby:"Snowboarden"},
+  "Hondenvriend.nl": {interest:"Honden"}, "KattenKennis.nl": {interest:"Katten"}, "VideoVibes.nl": {interest:"Video"},
+  "RobotLab.nl": {interest:"Robots"}, "VliegtuigFans.nl": {interest:"Vliegtuigen"}, "TreinSpot.nl": {interest:"Treinen"}
+};
+
+// Fallbacks voor gegarandeerde paspoortgroei
+const EXTRA_HOBBIES = ["Lezen","Films","Internet","Spelletjes","Fietsen","Tekenen"];
+const EXTRA_INTERESTS = ["Nieuws","Dieren","Technologie","Koken","Ruimte","Muziek"];
+const EXTRA_REMEMBER = ["Je taal","Je voorkeuren","Je login","Je thema","Je locatie"];
+
+// ---------- Elements ----------
+const svg = document.getElementById('svg');
+const sitesWrap = document.getElementById('sitesWrap');
+const trackersList = document.getElementById('trackersList');
+const centerLog = document.getElementById('centerLog');
+
+const scSites = document.getElementById('sc-sites');
+const scTrackedSites = document.getElementById('sc-tracked-sites');
+const scTrackers = document.getElementById('sc-trackers');
+
+const resetBtn = document.getElementById('resetBtn');
+const resultBtn = document.getElementById('resultBtn');
+
+const consentModal = document.getElementById('consentModal');
+const btnNecessary = document.getElementById('btnNecessary');
+const btnAll = document.getElementById('btnAll');
+const consentTitle = document.getElementById('consentTitle');
+const consentText = document.getElementById('consentText');
+
+const resultModal = document.getElementById('resultModal');
+const resultBody = document.getElementById('resultBody');
+const closeResult = document.getElementById('closeResult');
+
+const width=900, height=640;
+svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+const leftX=130, rightX=width-170;
+const siteYStep=height/(SITES.length+1);
+const trackerYStep=height/(TRACKERS.length+1);
+
+// ---------- State ----------
+let siteNodes=[], trackerNodes=[], links=[], assignment={};
+let trackerSeenCount={};
+let centerLogList=[];
+let trackedVisitedSites = new Set();
+let clickedSites = new Set();
+let bannerVariant = 0;
+let pendingSite = null;
+
+// Passport accumulators
+let pfHobby = new Set();
+let pfInterest = new Set();
+let pfAge = new Set();
+let pfRemember = new Set();
+let ageScore = 0;
+const AGE_SITES = new Set(["SpeelgoedFun.nl","KinderKrant.nl","SchoolWeb.nl","RekenSter.nl","TaalToppers.nl"]);
+
+// ---------- Init ----------
+function init(){
+  // Buttons list
+  sitesWrap.innerHTML = '';
+  SITES.forEach((s)=>{
+    const btn=document.createElement('button');
+    btn.className='site-btn';
+    btn.textContent=s;
+    btn.onclick=()=>attemptVisit(s, btn);
+    sitesWrap.appendChild(btn);
+  });
+
+  // Nodes
+  siteNodes=SITES.map((s,i)=>({id:s,x:leftX,y:(i+1)*siteYStep,r:12}));
+  trackerNodes=TRACKERS.map((t,i)=>({id:t,x:rightX,y:(i+1)*trackerYStep,r:20}));
+
+  randomizeAssignment();
+  renderSvg();
+  renderTrackersPanel();
+  hardResetCounters();
+}
+
+function randomizeAssignment(){
+  assignment={};
+  function biasedCount(){
+    const r=Math.random();
+    if(r<0.10) return 0;      // 10% zonder trackers
+    if(r<0.30) return 1;      // 20% met 1
+    if(r<0.70) return 2;      // 40% met 2
+    return 3;                 // 30% met 3
+  }
+  SITES.forEach(s=>{
+    const count = biasedCount();
+    const picks=[]; const pool=TRACKERS.slice();
+    while(picks.length<count && pool.length){
+      const idx=Math.floor(Math.random()*pool.length);
+      picks.push(pool.splice(idx,1)[0]);
+    }
+    assignment[s]=picks;
+  });
+  // Twee populaire trackers breed aanwezig
+  const popular1 = TRACKERS[Math.floor(Math.random()*TRACKERS.length)];
+  let popular2 = TRACKERS[Math.floor(Math.random()*TRACKERS.length)];
+  if(popular2===popular1) popular2 = TRACKERS[(TRACKERS.indexOf(popular1)+1)%TRACKERS.length];
+  [popular1,popular2].forEach(pop=>{
+    const howMany = 10 + Math.floor(Math.random()*10);
+    const pool=SITES.slice();
+    for(let i=0;i<howMany && pool.length;i++){
+      const idx=Math.floor(Math.random()*pool.length);
+      const s=pool.splice(idx,1)[0];
+      if(!assignment[s].includes(pop)) assignment[s].push(pop);
+    }
+  });
+  computeLinks();
+}
+
+// ---------- Graphics ----------
+function computeLinks(){
+  links=[];
+  for(const s of SITES){
+    const tr = assignment[s]||[];
+    for(const t of tr){
+      links.push({source:s,target:t});
+    }
+  }
+}
+
+function createSvg(tag){return document.createElementNS('http://www.w3.org/2000/svg',tag);}
+
+function renderSvg(){
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  // links
+  links.forEach(l=>{
+    const s=siteNodes.find(n=>n.id===l.source);
+    const t=trackerNodes.find(n=>n.id===l.target);
+    const path=createSvg('path');
+    const midX=(s.x+t.x)/2, dy=(t.y-s.y)/2;
+    path.setAttribute('d', `M ${s.x} ${s.y} Q ${midX} ${s.y+dy} ${t.x} ${t.y}`);
+    path.setAttribute('class','link');
+    path.setAttribute('data-src', l.source);
+    path.setAttribute('data-tgt', l.target);
+    svg.appendChild(path);
+  });
+  // sites
+  siteNodes.forEach(n=>{
+    const g=createSvg('g');
+    g.setAttribute('transform',`translate(${n.x},${n.y})`);
+    g.setAttribute('data-id',n.id);
+    const c=createSvg('circle'); c.setAttribute('r',n.r); c.setAttribute('class','site-node');
+    const lab=createSvg('text'); lab.setAttribute('y',4); lab.setAttribute('x', n.r+6); lab.setAttribute('class','label'); lab.textContent = n.id;
+    g.appendChild(c); g.appendChild(lab); svg.appendChild(g);
+  });
+  // trackers
+  trackerNodes.forEach(n=>{
+    const g=createSvg('g');
+    g.setAttribute('transform',`translate(${n.x},${n.y})`);
+    g.setAttribute('data-id',n.id);
+    const c=createSvg('circle'); c.setAttribute('r',n.r); c.setAttribute('class','tracker-node');
+    const lab=createSvg('text'); lab.setAttribute('y',5); lab.setAttribute('x', n.r+8); lab.setAttribute('class','label'); lab.textContent = n.id;
+    g.appendChild(c); g.appendChild(lab); svg.appendChild(g);
+  });
+  updateTrackerSizes();
+}
+
+// ---------- Consent (short) ----------
+function attemptVisit(siteName, btnRef){
+  pendingSite = {siteName, btnRef};
+  bannerVariant = (bannerVariant+1)%3;
+  const texts=[
+    "Alleen noodzakelijke cookies of alles toestaan?",
+    "Wat kies je: noodzakelijk of alles?",
+    "Sta je volgen toe, of alleen noodzakelijke cookies?"
+  ];
+  consentTitle.textContent = `Cookie‑keuze voor ${siteName}`;
+  consentText.textContent = texts[bannerVariant];
+  openModal(consentModal);
+}
+
+function openModal(m){ m.style.display='flex'; }
+function closeModal(m){ m.style.display='none'; }
+
+btnNecessary.onclick = ()=>{ if(pendingSite){ visitSite(pendingSite.siteName, false, pendingSite.btnRef); pendingSite=null; } closeModal(consentModal); };
+btnAll.onclick = ()=>{ if(pendingSite){ visitSite(pendingSite.siteName, true, pendingSite.btnRef); pendingSite=null; } closeModal(consentModal); };
+
+// ---------- Visit ----------
+function visitSite(siteName, allowTrackers, btnRef){
+  // disable button & make grey
+  if(btnRef && !clickedSites.has(siteName)){
+    btnRef.classList.add('clicked');
+    btnRef.disabled = true;
+    clickedSites.add(siteName);
+  }
+
+  // highlight links only if trackers allowed
+  const allLinks = Array.from(svg.querySelectorAll('.link'));
+  allLinks.forEach(l=>l.classList.remove('highlight'));
+  const tr = allowTrackers ? (assignment[siteName]||[]) : [];
+  if(allowTrackers){
+    allLinks.filter(l=>l.getAttribute('data-src')===siteName).forEach(l=>l.classList.add('highlight'));
+  }
+
+  // guaranteed passport growth
+  updatePassport(siteName);
+
+  if(tr.length>0 && allowTrackers) trackedVisitedSites.add(siteName);
+
+  const time = new Date().toLocaleTimeString();
+  if(allowTrackers && tr.length>0){
+    tr.forEach(t=>{ trackerSeenCount[t]=(trackerSeenCount[t]||0)+1; });
+    const list = tr.map(t=>`<span class="orangeBold">${t}</span>`).join(', ');
+    centerLogList.unshift(`${time} — Deze bedrijven zagen je op ${siteName}: ${list}.`);
+  }else if(allowTrackers && tr.length===0){
+    centerLogList.unshift(`${time} — Geen extra bedrijven op ${siteName}.`);
+  }else{
+    centerLogList.unshift(`${time} — Je koos <strong>Alleen noodzakelijke cookies</strong> op ${siteName}. (Geen trackers toegestaan)`);
+  }
+  if(centerLogList.length>250) centerLogList.length=250;
+
+  updateTrackersPanel();
+  updateCenterLog();
+  updateScoreboard();
+  updateTrackerSizes();
+}
+
+// ---------- Passport (accumulating + fallback + age inference) ----------
+function setFieldAccum(id, set){
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(set.size===0){
+    el.textContent = '—';
+    el.classList.add('empty');
+  }else{
+    el.textContent = Array.from(set).join(', ');
+    el.classList.remove('empty');
+  }
+}
+
+function updatePassport(site){
+  const hint = PROFILE_HINTS[site] || {};
+  let added = false;
+  if(hint.hobby){ pfHobby.add(hint.hobby); added = true; }
+  if(hint.interest){ pfInterest.add(hint.interest); added = true; }
+  if(hint.age){ pfAge.add(hint.age); added = true; }
+  if(hint.remember){ pfRemember.add(hint.remember); added = true; }
+
+  // Fallback: als er geen specifieke hint was, voeg willekeurig iets toe
+  if(!added){
+    const r = Math.random();
+    if(r < 0.34){
+      pfHobby.add(EXTRA_HOBBIES[Math.floor(Math.random()*EXTRA_HOBBIES.length)]);
+    }else if(r < 0.67){
+      pfInterest.add(EXTRA_INTERESTS[Math.floor(Math.random()*EXTRA_INTERESTS.length)]);
+    }else{
+      pfRemember.add(EXTRA_REMEMBER[Math.floor(Math.random()*EXTRA_REMEMBER.length)]);
+    }
+  }
+
+  // Age inference op basis van kind-sites
+  if(AGE_SITES.has(site)){ ageScore++; }
+  if(ageScore>=2 && !pfAge.has("Kind (8–12)")){ pfAge.add("Kind (8–12)"); }
+
+  setFieldAccum('pf-hobby', pfHobby);
+  setFieldAccum('pf-interest', pfInterest);
+  setFieldAccum('pf-age', pfAge);
+  setFieldAccum('pf-remember', pfRemember);
+}
+
+// ---------- Panels ----------
+function renderTrackersPanel(){
+  trackersList.innerHTML='';
+  TRACKERS.forEach(t=>{
+    const presentOn = SITES.filter(s=> assignment[s] && assignment[s].includes(t)).length;
+    const seen = trackerSeenCount[t] || 0;
+    const card=document.createElement('div');
+    card.className='tracker-card';
+    const title=document.createElement('div'); title.innerHTML=`<span class="orangeBold">${t}</span>`;
+    const line1=document.createElement('div'); line1.innerHTML=`<span class="badge" id="seen-${t}">${seen}</span> keer jou gezien`;
+    const line2=document.createElement('div'); line2.className='small'; line2.id=`present-${t}`; line2.textContent=`Aanwezig op: ${presentOn} sites`;
+    card.appendChild(title); card.appendChild(line1); card.appendChild(line2);
+    trackersList.appendChild(card);
+  });
+}
+
+function updateTrackersPanel(){
+  TRACKERS.forEach(t=>{
+    const seen = trackerSeenCount[t] || 0;
+    const seenEl = document.getElementById(`seen-${t}`);
+    if(seenEl) seenEl.textContent = seen;
+  });
+}
+
+function updateCenterLog(){
+  centerLog.innerHTML='';
+  if(centerLogList.length===0){
+    const d=document.createElement('div'); d.className='small'; d.innerHTML='Nog geen acties. Klik op een website en maak je keuze in de cookie‑banner.'; centerLog.appendChild(d); return;
+  }
+  centerLogList.forEach(v=>{const d=document.createElement('div'); d.innerHTML=v; centerLog.appendChild(d);});
+}
+
+function updateScoreboard(){
+  scSites.textContent = clickedSites.size;
+  scTrackedSites.textContent = trackedVisitedSites.size;
+  const uniqueTrackers = Object.keys(trackerSeenCount).filter(k=>trackerSeenCount[k]>0).length;
+  scTrackers.textContent = uniqueTrackers;
+}
+
+function updateTrackerSizes(){
+  trackerNodes.forEach(n=>{
+    const presentOn = SITES.filter(s=> assignment[s] && assignment[s].includes(n.id)).length;
+    const base = 12 + presentOn * 2.2;
+    const circle = svg.querySelector(`g[data-id="${n.id}"] circle`);
+    if(circle) circle.setAttribute('r', base);
+  });
+}
+
+// ---------- Reset & Result ----------
+function hardResetCounters(){
+  trackerSeenCount={};
+  centerLogList=[];
+  trackedVisitedSites = new Set();
+  clickedSites = new Set();
+  pfHobby = new Set(); pfInterest = new Set(); pfAge = new Set(); pfRemember = new Set();
+  ageScore = 0;
+  // reset buttons
+  Array.from(document.querySelectorAll('.site-btn')).forEach(b=>{b.disabled=false; b.classList.remove('clicked');});
+  // reset passport fields
+  setFieldAccum('pf-hobby', pfHobby);
+  setFieldAccum('pf-interest', pfInterest);
+  setFieldAccum('pf-age', pfAge);
+  setFieldAccum('pf-remember', pfRemember);
+  updateTrackersPanel();
+  updateCenterLog();
+  updateScoreboard();
+  // clear highlights
+  Array.from(svg.querySelectorAll('.link')).forEach(l=>l.classList.remove('highlight'));
+}
+
+resetBtn.onclick = ()=>{ hardResetCounters(); };
+
+resultBtn.onclick = ()=>{
+  const uniqueTrackers = Object.keys(trackerSeenCount).filter(k=>trackerSeenCount[k]>0);
+  const top = uniqueTrackers.map(t=>({t, c:trackerSeenCount[t]})).sort((a,b)=>b.c-a.c)[0];
+  const topLine = top ? `<div class="stat"><div class="num">${top.c}</div><div>Meest actief: <span class="orangeBold">${top.t}</span></div></div>` : `<div class="stat"><div>Nog geen bedrijven hebben je gevolgd.</div></div>`;
+
+  const hobbyChips = Array.from(pfHobby).map(v=>`<span class="chip">${v}</span>`).join('') || '<span class="small">Geen hobby’s gevonden</span>';
+  const interestChips = Array.from(pfInterest).map(v=>`<span class="chip">${v}</span>`).join('') || '<span class="small">Geen interesses gevonden</span>';
+  const ageChips = Array.from(pfAge).map(v=>`<span class="chip">${v}</span>`).join('') || '<span class="small">Geen leeftijdsgroep</span>';
+  const rememberChips = Array.from(pfRemember).map(v=>`<span class="chip">${v}</span>`).join('') || '<span class="small">Geen onthouden-instellingen</span>';
+
+  resultBody.innerHTML = `
+    <div class="result-grid">
+      <div class="stat"><div class="num">${clickedSites.size}</div><div>Websites bezocht</div></div>
+      <div class="stat"><div class="num">${trackedVisitedSites.size}</div><div>Websites waar je gevolgd bent</div></div>
+      <div class="stat"><div class="num">${uniqueTrackers.length}</div><div>Bedrijven die jou nu volgen</div></div>
+      ${topLine}
+    </div>
+    <h4>Jouw profiel (wat bedrijven van je kunnen afleiden)</h4>
+    <div style="margin-bottom:6px"><strong>Hobby</strong><div>${hobbyChips}</div></div>
+    <div style="margin-bottom:6px"><strong>Interesses</strong><div>${interestChips}</div></div>
+    <div style="margin-bottom:6px"><strong>Leeftijdsgroep</strong><div>${ageChips}</div></div>
+    <div style="margin-bottom:6px"><strong>Onthouden</strong><div>${rememberChips}</div></div>
+  `;
+  openModal(resultModal);
+};
+
+closeResult.onclick = ()=> closeModal(resultModal);
+
+// ---------- Utils ----------
+function createSvg(tag){return document.createElementNS('http://www.w3.org/2000/svg',tag);}
+function openModal(m){ m.style.display='flex'; }
+function closeModal(m){ m.style.display='none'; }
+
+// ---------- Start ----------
+init();
+</script>
+</body>
+</html>
